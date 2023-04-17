@@ -106,7 +106,7 @@ def create_sub_mask_annotation(sub_mask):
     return polygons, segmentations
 
 
-def create_prediction_submask_anns(masks, image_id, cat_id):
+def create_prediction_submask_anns(masks, image_id, cat_ids: list, cat_id_map=CAT_ID_MAP):
     """
     gonna run with one prediction from one image at a time. we will have to extend the lists of images and annotations
     :param pred: prediction from our NN
@@ -118,12 +118,13 @@ def create_prediction_submask_anns(masks, image_id, cat_id):
     for i in range(N):
         #taking out a convert('RGB')
         #torch tensor has a wierd channel in the [N,1, H,W], taking out a channel with 0
+        cat_id = cat_ids[i]
         sub_mask = Image.fromarray(masks[i][0].cpu().numpy())
         polygons, segmentations = create_sub_mask_annotation(sub_mask)
         multi_poly = MultiPolygon(polygons)
         sub_mask_anns.append(create_annotation_format(multi_poly,
                                                       segmentations,
                                                       image_id,
-                                                      category_id=CAT_ID_MAP[cat_id],
+                                                      category_id=cat_id_map[cat_id],
                                                       annotation_id=i))
     return sub_mask_anns
