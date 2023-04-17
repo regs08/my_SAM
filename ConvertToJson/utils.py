@@ -1,7 +1,7 @@
 from skimage import measure  # (pip install scikit-image)
 from shapely.geometry import Polygon, MultiPolygon  # (pip install Shapely)
 from PIL import Image
-from my_SAM.config import CAT_ID_MAP
+from my_SAM.config import ID_TO_LABEL_MAP
 import numpy as np
 
 """
@@ -106,7 +106,7 @@ def create_sub_mask_annotation(sub_mask):
     return polygons, segmentations
 
 
-def create_prediction_submask_anns(masks, image_id, cat_ids: list, cat_id_map=CAT_ID_MAP):
+def create_prediction_submask_anns(masks, image_id, cat_ids: list, cat_id_map=ID_TO_LABEL_MAP):
     """
     gonna run with one prediction from one image at a time. we will have to extend the lists of images and annotations
     :param pred: prediction from our NN
