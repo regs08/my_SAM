@@ -125,6 +125,6 @@ def create_prediction_submask_anns(masks, image_id, cat_ids: list, cat_id_map=ID
         sub_mask_anns.append(create_annotation_format(multi_poly,
                                                       segmentations,
                                                       image_id,
-                                                      category_id=cat_id_map[cat_id],
+                                                      category_id=cat_id,
                                                       annotation_id=i))
     return sub_mask_anns
