@@ -6,7 +6,7 @@ import os
 
 def convert_sam_predictions_to_coco(image_path, masks, cat_ids: list, image_id=0, cat_id_map=ID_TO_LABEL_MAP):
     """
-    here we take in an image path and the masks generated on it b SAM.
+    here we take in an image path and the masks generated on it by SAM.
     it is assumed that we have one category.
     """
     coco_format = get_coco_json_format()
