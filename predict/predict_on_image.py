@@ -1,10 +1,29 @@
-from yolo_data.LoadingData.load_utils import get_yolo_bboxes_from_txt_file, get_annotation_path
+from yolo_data.LoadingData.load_utils import get_yolo_bboxes_from_txt_file, get_annotation_path, glob_image_files
 from yolo_data.default_param_configs import cat_id_map
 from yolo_data.Conversions.convert_yolo_pascal_voc import convert_yolo_to_pascal_voc
 
 import numpy as np
 import cv2
 import torch
+
+
+def apply_sam_to_image_folder_with_boxes(img_dir, ann_dir, predictor):
+    """
+
+    :param img_dir: image folder
+    :param ann_dir: ann folder
+    :param predictor: instance of SAM predictor
+    :return: a list of masks [m, N,C,H,W]; where m is the mask on the image, N is the number of instances, C (?) (h,w) of image
+            a list of class_ids that will have the same len as N in the corresponding mask
+    """
+    image_paths = glob_image_files(img_dir)
+    masks = []
+    all_class_ids = []
+    for img_path in image_paths:
+      mask, class_ids = apply_sam_to_image_with_bboxes(img_path, ann_dir, predictor)
+      masks.append(mask)
+      all_class_ids.append(class_ids)
+    return masks, all_class_ids
 
 
 def apply_sam_to_image_with_bboxes(img_path, ann_dir, sam_predictor):
@@ -52,3 +71,4 @@ def apply_sam_to_image_with_bboxes(img_path, ann_dir, sam_predictor):
     )
 
     return masks, class_ids
+
