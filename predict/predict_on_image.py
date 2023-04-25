@@ -40,11 +40,11 @@ def apply_sam_to_image_with_bboxes(img_path, ann_dir, sam_predictor):
     ann_path = get_annotation_path(img_path, ann_dir)
 
     #loading in bbox and class_ids - assumed that boxes are in yolo -
-    bboxes, cat_ids = get_yolo_bboxes_from_txt_file(ann_path)
+    bboxes, class_ids = get_yolo_bboxes_from_txt_file(ann_path)
     print(f'num boxes(instances) in file: {len(bboxes)}')
 
     #loading in labels
-    labels = [cat_id_map[id] for id in cat_ids]
+    labels = [cat_id_map[id] for id in class_ids]
     print('unique labels: ', np.unique(np.array(labels)))
 
     #loading in image
@@ -71,7 +71,7 @@ def apply_sam_to_image_with_bboxes(img_path, ann_dir, sam_predictor):
     )
     data = {
         'masks': masks,
-        'cat_ids': cat_ids,
+        'class_ids': class_ids,
         'filename': os.path.basename(img_path)
     }
 
