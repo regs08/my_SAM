@@ -1,22 +1,26 @@
 import cv2
 import numpy as np
+from segment_anything.utils.amg import remove_small_regions
 
 
-def extract_segmentation_and_bbox_from_binary_mask(binary_mask):
-  """
-  returns a normilized bbox in yolo format and segmentation [(x,y), (x,y)...]
-  """
-  h,w = binary_mask.shape
-  contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+def extract_segmentation_and_bbox_from_binary_mask(binary_mask, remove_islands=True):
+    """
+    returns a normilized bbox in yolo format and segmentation [(x,y), (x,y)...]
+    """
+    if remove_islands:
+        binary_mask, _ = remove_small_regions(binary_mask, area_thresh=1000000.0, mode='islands')
+    h,w = binary_mask.shape
+    contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
-  #normilize the countours
-  normed_contours =normalize_segmentation_coords(contours, w,h)
-  # Get the largest contour based on area
-  largest_contour = max(contours, key=cv2.contourArea)
-  # Get the new bounding box (x, y, width, height)
-  bbox = [int(x) for x in cv2.boundingRect(largest_contour)]
-  norm_bbox = normalize_yolo_bbox(bbox, w,h )
-  return norm_bbox, normed_contours
+    #normilize the countours
+    normed_contours =normalize_segmentation_coords(contours, w,h)
+    # Get the largest contour based on area
+    largest_contour = max(contours, key=cv2.contourArea)
+    # Get the new bounding box (x, y, width, height)
+    bbox = [int(x) for x in cv2.boundingRect(largest_contour)]
+    norm_bbox = normalize_yolo_bbox(bbox, w,h )
+
+    return norm_bbox, normed_contours
 
 
 def normalize_segmentation_coords(segmentation_coords, image_width, image_height):
