@@ -9,7 +9,10 @@ def extract_segmentation_and_bbox_from_binary_mask(binary_mask, remove_islands=T
     """
     if remove_islands:
         binary_mask, _ = remove_small_regions(binary_mask, area_thresh=1000000.0, mode='islands')
+        binary_mask = binary_mask.astype(np.uint8)
+
     h,w = binary_mask.shape
+
     contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
     #normilize the countours
