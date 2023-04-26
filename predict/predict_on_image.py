@@ -14,7 +14,9 @@ def apply_sam_to_image_folder_with_boxes(img_dir, ann_dir, predictor):
     :param img_dir: image folder
     :param ann_dir: ann folder
     :param predictor: instance of SAM predictor
-    :return: a list of dictionaries containing the masks, class ids and filename for a given image
+    :return: a list of dictionaries containing the masks, class ids, bboxes, and filename for a given image
+        adding in bbox here because we have been getting incomplete predictions to increase training accuracy were gonna
+        'give' the bbox away
     """
     image_paths = glob_image_files(img_dir)
     output = []
@@ -72,7 +74,8 @@ def apply_sam_to_image_with_bboxes(img_path, ann_dir, sam_predictor):
     data = {
         'masks': masks,
         'class_ids': class_ids,
-        'filename': os.path.basename(img_path)
+        'filename': os.path.basename(img_path),
+        'bboxes': bboxes
     }
 
     return data
