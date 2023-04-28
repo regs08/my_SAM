@@ -10,11 +10,6 @@ for setting the point labels var in SAM predict
 
 """
 
-from yolo_data.LoadingData.load_utils import get_yolo_bboxes_from_txt_file
-
-
-
-
 def get_point_labels(class_labels):
     strings_without_num = []
     num_list = []
@@ -31,11 +26,3 @@ def get_point_labels(class_labels):
     return strings_without_num, num_list
 
 
-yolo_txt = "/Volumes/ColesSSD/Pictures/Vineyard/Canopy/Pinot-Noir/IMG_0198.txt"
-bboxes, class_ids = get_yolo_bboxes_from_txt_file(yolo_txt)
-label_to_id_map, id_to_cat_map = read_classes("/Volumes/ColesSSD/Pictures/Vineyard/Canopy/Pinot-Noir/classes.txt")
-
-labels = [id_to_cat_map[id] for id in class_ids]
-labels, background_foreground = get_point_labels(labels)
-
-print(labels, background_foreground)
