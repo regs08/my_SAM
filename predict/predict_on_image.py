@@ -1,6 +1,8 @@
 from yolo_data.LoadingData.load_utils import get_yolo_bboxes_from_txt_file, get_annotation_path, glob_image_files
-from yolo_data.default_param_configs import cat_id_map
 from yolo_data.Conversions.convert_yolo_pascal_voc import convert_yolo_to_pascal_voc
+
+from my_SAM.config import ID_TO_LABEL_MAP
+from my_SAM.get_point_labels import get_point_labels
 
 import numpy as np
 import cv2
@@ -8,7 +10,7 @@ import torch
 import os
 
 
-def apply_sam_to_image_folder_with_boxes(img_dir, ann_dir, predictor):
+def apply_sam_to_image_folder_with_boxes(img_dir, ann_dir, predictor, point_labels=False):
     """
 
     :param img_dir: image folder
@@ -22,13 +24,13 @@ def apply_sam_to_image_folder_with_boxes(img_dir, ann_dir, predictor):
     output = []
 
     for img_path in image_paths:
-        data = apply_sam_to_image_with_bboxes(img_path, ann_dir, predictor)
+        data = apply_sam_to_image_with_bboxes(img_path, ann_dir, predictor, point_labels)
         output.append(data)
 
     return output
 
 
-def apply_sam_to_image_with_bboxes(img_path, ann_dir, sam_predictor):
+def apply_sam_to_image_with_bboxes(img_path, ann_dir, sam_predictor, point_labels=False):
     """
     TODO experiment with the point labels (background, foreground)
     takes in a img path loads it, finds its corresponding annotation, loads in the bbox from the annotation, then uses
@@ -36,6 +38,7 @@ def apply_sam_to_image_with_bboxes(img_path, ann_dir, sam_predictor):
     :param img_path: path to load image
     :param ann_dir: folder where anns are stored. note filename w/o ext must==image filename
     :param sam_predictor: predictor instance of SAM
+    :param point_labels if we are using the point labels for background, 0, foreground 1
     :return: data package with masks, class ids and filename
     """
     #get ann path
@@ -46,7 +49,10 @@ def apply_sam_to_image_with_bboxes(img_path, ann_dir, sam_predictor):
     print(f'num boxes(instances) in file: {len(bboxes)}')
 
     #loading in labels
-    labels = [cat_id_map[id] for id in class_ids]
+    labels = [ID_TO_LABEL_MAP[id] for id in class_ids]
+
+    #extracting background/foreground info and the class label
+    labels, background_foreground = get_point_labels(labels)
     print('unique labels: ', np.unique(np.array(labels)))
 
     #loading in image
@@ -64,10 +70,15 @@ def apply_sam_to_image_with_bboxes(img_path, ann_dir, sam_predictor):
     from_file_bboxes = torch.tensor(p_v_bboxes, device=sam_predictor.device)
     transformed_bboxes_from_file = sam_predictor.transform.apply_boxes_torch(from_file_bboxes, img.shape[:2])
 
+    if point_labels:
+        point_labels = background_foreground
+    else:
+        point_labels=None
+
     #extracting masks
     masks, _, _ = sam_predictor.predict_torch(
       point_coords=None,
-      point_labels=None,
+      point_labels=point_labels,
       boxes=transformed_bboxes_from_file,
       multimask_output=False,
     )
