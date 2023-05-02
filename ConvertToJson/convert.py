@@ -6,14 +6,14 @@ from my_SAM.config import LABEL_TO_ID_MAP
 def get_img_ann_as_coco_from_sam(pred_output: dict, image_id=0):
     """
     takes in a single prediction and returns the img and seg annotation in coco format
-    :param pred_output: dict containing the keys: 'mask', 'filename', 'cat_ids'; gotten from method apply SAM on image with boxes
+    :param pred_output: dict containing the keys: 'masks', 'bboxes', 'filename', 'cat_ids'; gotten from method apply SAM on image with boxes
     :param image_id: id of the image default is 0 for testing
     :param label_id_map:
     :return:
     """
 
     #create image annotation and segmentaion ann from maskoutput
-    mask = pred_output['mask']
+    mask = pred_output['masks']
     _,_,h,w = mask.shape
     img = create_image_annotation(pred_output['filename'], w, h, image_id=image_id)
     anns = create_prediction_submask_anns(mask, cat_ids=pred_output['cat_ids'], image_id=image_id)
