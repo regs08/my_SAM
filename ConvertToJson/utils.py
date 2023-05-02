@@ -5,7 +5,7 @@ from my_SAM.config import ID_TO_LABEL_MAP
 import numpy as np
 
 """
-Our format for our coco json 
+Format for our coco json 
 """
 
 
@@ -106,7 +106,7 @@ def create_sub_mask_annotation(sub_mask):
     return polygons, segmentations
 
 
-def create_prediction_submask_anns(masks, image_id, cat_ids: list, cat_id_map=ID_TO_LABEL_MAP):
+def create_prediction_submask_anns(masks, image_id, cat_ids: list):
     """
     gonna run with one prediction from one image at a time. we will have to extend the lists of images and annotations
     :param pred: prediction from our NN

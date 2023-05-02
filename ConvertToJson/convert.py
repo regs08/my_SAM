@@ -1,25 +1,48 @@
 from my_SAM.ConvertToJson.utils import get_coco_json_format, \
     create_category_annotation, create_image_annotation, create_prediction_submask_anns
-from my_SAM.config import ID_TO_LABEL_MAP, LABEL_TO_ID_MAP
-import os
+from my_SAM.config import LABEL_TO_ID_MAP
 
 
-def convert_sam_predictions_to_coco(image_path, masks, cat_ids: list, image_id=0, cat_id_map=ID_TO_LABEL_MAP):
+def get_img_ann_as_coco_from_sam(pred_output: dict, image_id=0):
     """
-    here we take in an image path and the masks generated on it by SAM.
-    it is assumed that we have one category.
+    takes in a single prediction and returns the img and seg annotation in coco format
+    :param pred_output: dict containing the keys: 'mask', 'filename', 'cat_ids'; gotten from method apply SAM on image with boxes
+    :param image_id: id of the image default is 0 for testing
+    :param label_id_map:
+    :return:
+    """
+
+    #create image annotation and segmentaion ann from maskoutput
+    mask = pred_output['mask']
+    _,_,h,w = mask.shape
+    img = create_image_annotation(pred_output['filename'], w, h, image_id=image_id)
+    anns = create_prediction_submask_anns(mask, cat_ids=pred_output['cat_ids'], image_id=image_id)
+
+    return img, anns
+
+
+def get_coco_format_from_sam(predictions: list, label_id_map=LABEL_TO_ID_MAP):
+    """
+    takes in a list of dicts gotten from our predictions, creates the coco format with the label id map
+    fills in the image and segmentation info returns the coco file
+    :param predictions:
+    :param label_id_map:
+    :return: dict formatted as coco
     """
     coco_format = get_coco_json_format()
-    coco_format['categories'] = create_category_annotation(LABEL_TO_ID_MAP)
+    coco_format['categories'] = create_category_annotation(label_id_map)
 
-    _,_,h,w = masks.shape
-    filename = os.path.basename(image_path)
+    all_img_anns = []
+    all_seg_anns = []
 
-    img = create_image_annotation(filename, w,h, image_id=image_id)
-    anns = create_prediction_submask_anns(masks, cat_ids=cat_ids, image_id=image_id)
+    for i, pred in enumerate(predictions):
+        #gettting the coco formatted image and segmentation(segmentation, bbox area...) info
+        img, anns = get_img_ann_as_coco_from_sam(pred, image_id=i)
 
-    coco_format['images'] = img
-    coco_format['annotations'] = anns
+        all_img_anns.append(img)
+        all_seg_anns.extend(anns)
+
+    coco_format['images'] = all_img_anns
+    coco_format['annotations'] = all_seg_anns
+
     return coco_format
-
-
