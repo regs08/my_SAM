@@ -49,7 +49,8 @@ def apply_sam_to_image_with_bboxes(img_path, ann_dir, sam_predictor, point_label
     print(f'num boxes(instances) in file: {len(bboxes)}')
 
     #loading in labels
-    labels = [ID_TO_LABEL_MAP[id] for id in class_ids]
+    #note doing hacky fix to compensate for saving to coco. e.g labels must not be 0. 0 is saved for background
+    labels = [ID_TO_LABEL_MAP[id+1] for id in class_ids]
 
     #extracting background/foreground info and the class label
     labels, background_foreground = get_point_labels(labels)
