@@ -16,7 +16,7 @@ import random
 class MyDataset():
     def __init__(self,
                 image_dir,
-                image_exts=('.jpg', '.tiff', '.png', '.jpeg', '.JPG'),
+                image_exts=['.jpg', '.tiff', '.png', '.jpeg', '.JPG'],
                 ):
         self.image_dir = image_dir
         self.image_exts = image_exts.extend([e.upper for e in image_exts])
