@@ -3,7 +3,7 @@ from my_SAM.ConvertToJson.utils import get_coco_json_format, \
 from my_SAM.config import LABEL_TO_ID_MAP
 
 
-def get_img_ann_as_coco_from_sam(pred_output: dict, image_id=0):
+def get_img_ann_as_coco_from_sam(pred_output: dict, image_id):
     """
     takes in a single prediction and returns the img and seg annotation in coco format
     :param pred_output: dict containing the keys: 'masks', 'bboxes', 'filename', 'class_ids'; gotten from method apply SAM on image with boxes
