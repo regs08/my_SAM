@@ -83,6 +83,7 @@ def apply_sam_to_image_with_bboxes(img_path, ann_dir, sam_predictor, point_label
       boxes=transformed_bboxes_from_file,
       multimask_output=False,
     )
+
     data = {
         'masks': masks,
         'class_ids': class_ids,
