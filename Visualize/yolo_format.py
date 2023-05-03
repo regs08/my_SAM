@@ -80,7 +80,7 @@ def plot_image_with_yolo_annotations(image_path, annotation_path):
     plt.show()
 
 
-def plot_image_with_boxes(image_path, label_path):
+def plot_image_with_yolo_boxes(image_path, label_path):
     # Load the image
     image = cv2.imread(image_path)
     # Convert the image from BGR to RGB for Matplotlib
