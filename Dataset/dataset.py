@@ -4,6 +4,7 @@ from my_SAM.postprocessing import extract_segmentation_and_bbox_from_binary_mask
 from my_SAM.config import LABEL_TO_ID_MAP, ID_TO_LABEL_MAP
 from yolo_data.WritingRenamingFile.writing_to_file_utils import segmentation_to_yolo_line, write_lines_to_file
 from my_SAM.ConvertToJson.convert import get_coco_format_from_sam
+
 from matplotlib import pyplot as plt
 import re
 import numpy as np
@@ -53,6 +54,9 @@ class mySAMOutput(MyDataset):
             self.mask_output = self.predict_on_images_coco_bboxes()
         else:
             print('invalid mask output')
+    """
+    Input format 
+    """
 
     def predict_on_images_yolo_bboxes(self):
         output = []
@@ -63,6 +67,10 @@ class mySAMOutput(MyDataset):
 
     def predict_on_images_coco_bboxes(self):
         pass
+
+    """
+    Output format
+    """
 
     def output_to_yolo(self, remove_islands=False, outfolder=None):
         """
@@ -99,6 +107,10 @@ class mySAMOutput(MyDataset):
             json.dump(coco_format, of, indent=4)
 
         return coco_format
+
+    """
+    Vis.
+    """
 
     def plot_image_and_yolo_bboxes(self):
         from my_SAM.Visualize.yolo_format import plot_image_with_yolo_annotations
