@@ -2,6 +2,8 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
+from yolo_data.LoadingData.load_utils import get_yolo_bboxes_from_txt_file
+
 
 def convert_yolo_to_pascal_voc(yolo_box, image_height, image_width, normilized=True):
 
@@ -76,3 +78,27 @@ def plot_image_with_yolo_annotations(image_path, annotation_path):
     # Display the image
     plt.imshow(cv2.cvtColor(masked_image, cv2.COLOR_BGR2RGB))
     plt.show()
+
+
+def plot_image_with_boxes(image_path, label_path):
+    # Load the image
+    image = cv2.imread(image_path)
+    # Convert the image from BGR to RGB for Matplotlib
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+    bboxes, class_ids = get_yolo_bboxes_from_txt_file(label_path)
+
+    # Parse the label data and draw the boxes
+    for box in bboxes:
+        x_center, y_center, width, height = box
+        x_min = int((x_center - width / 2) * image.shape[1])
+        y_min = int((y_center - height / 2) * image.shape[0])
+        x_max = int((x_center + width / 2) * image.shape[1])
+        y_max = int((y_center + height / 2) * image.shape[0])
+        cv2.rectangle(image, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
+
+    # Show the image with boxes using Matplotlib in Google Colab
+    plt.imshow(image)
+    plt.axis('off')
+    plt.show()
+
