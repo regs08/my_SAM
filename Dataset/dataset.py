@@ -113,10 +113,10 @@ class mySAMOutput(MyDataset):
     """
 
     def plot_image_and_yolo_bboxes(self):
-        from my_SAM.Visualize.yolo_format import plot_image_with_yolo_annotations
+        from my_SAM.Visualize.yolo_format import plot_image_with_yolo_boxes
         assert os.path.exists(self.anns)
         image_path, ann_path = get_random_image_ann_path_from_image_folder(self.image_dir, self.anns)
-        plot_image_with_yolo_annotations(image_path, ann_path)
+        plot_image_with_yolo_boxes(image_path, ann_path)
 
     def plot_image_coco_bboxes(self):
         pass
@@ -163,6 +163,7 @@ def get_random_image_ann_path_from_image_folder(image_folder, ann_folder):
     image_path = random.choice(image_folder)
     ann_path = os.path.join(ann_folder, os.path.splitext(os.path.basename(image_path))[0] + '.txt')
     return image_path, ann_path
+
 #####
 # Vis utils
 #####
