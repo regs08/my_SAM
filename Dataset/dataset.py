@@ -16,10 +16,10 @@ import random
 class MyDataset():
     def __init__(self,
                 image_dir,
-                image_exts=['.jpg', '.tiff', '.png', '.jpeg', '.JPG'],
+                image_exts=['.jpg', '.tiff', '.png', '.jpeg', '.JPG']
                 ):
         self.image_dir = image_dir
-        self.image_exts = image_exts.extend([e.upper for e in image_exts])
+        self.image_exts = image_exts
         self.image_paths = self.get_image_files()
 
     def get_image_files(self):
@@ -32,7 +32,7 @@ class MyDataset():
 
 class mySAMOutput(MyDataset):
 
-    def __init__(self, image_dir, sam_predictor, anns=None, point_labels=False, input_data='yolo', **args):
+    def __init__(self, image_dir, sam_predictor, anns=None, point_labels=False, input_format='yolo', **args):
         """
 
         :param image_dir: image folder
@@ -47,13 +47,24 @@ class mySAMOutput(MyDataset):
         self.sam_predictor = sam_predictor
         self.anns= anns
         self.point_labels = point_labels
+        self.input_format = input_format
+        self.image_paths = self.get_image_files()
 
-        if input_data == 'yolo':
+        if self.input_format == 'yolo':
             self.mask_output = self.predict_on_images_yolo_bboxes()
-        if input_data == 'coco':
+        if self.input_format == 'coco':
             self.mask_output = self.predict_on_images_coco_bboxes()
         else:
             print('invalid mask output')
+        self.set_binary_masks()
+
+    def set_binary_masks(self):
+      for mask_data in self.mask_output:
+        b_masks = []
+        for i, mask in enumerate(mask_data['masks']):
+          binary_mask = mask.cpu().numpy().squeeze().astype(np.uint8)
+          b_masks.append(binary_mask)
+          mask_data['b_masks'] = b_masks
     """
     Input format 
     """
@@ -83,23 +94,29 @@ class mySAMOutput(MyDataset):
         for mask_data in self.mask_output:
             lines = []
             for i, mask in enumerate(mask_data['masks']):
+
                 binary_mask = mask.cpu().numpy().squeeze().astype(np.uint8)
                 # returns a norm bbox and seg
                 _, seg = extract_segmentation_and_bbox_from_binary_mask(binary_mask, remove_islands=remove_islands)
                 bbox = mask_data['bboxes'][i]
                 # convert our data into a writable line in yolo format append it line by line
-                class_id = mask_data['class_ids'][i]
+                #hacky fix had to change label_map to start with 0 because of COCO
+                class_id = mask_data['class_ids'][i] +1
                 class_id = remove_bckgrnd_marker_from_class_id(class_id)
+
                 lines.append(segmentation_to_yolo_line(class_id=class_id, bbox=bbox, segmentation=seg))
+
             filename = os.path.splitext(os.path.basename(mask_data['filename']))[0] + '.txt'
             filepath = os.path.join(outfolder, filename)
             write_lines_to_file(filepath, lines)
-            return outfolder
+
+        return outfolder
 
     def output_to_coco_json(self, save_path):
 
         for mask_data in self.mask_output:
             # plus one because background is 0 in coco
+            # should take in bboxes from mask out put (more accurate)
             mask_data['class_ids'] = [remove_bckgrnd_marker_from_class_id(id + 1) for id in mask_data['class_ids']]
         coco_format = get_coco_format_from_sam(self.mask_output)
 
@@ -115,7 +132,7 @@ class mySAMOutput(MyDataset):
     def plot_image_and_yolo_bboxes(self):
         from my_SAM.Visualize.yolo_format import plot_image_with_yolo_boxes
         assert os.path.exists(self.anns)
-        image_path, ann_path = get_random_image_ann_path_from_image_folder(self.image_dir, self.anns)
+        image_path, ann_path = get_random_image_ann_path_from_image_paths(self.image_paths, self.anns)
         plot_image_with_yolo_boxes(image_path, ann_path)
 
     def plot_image_coco_bboxes(self):
@@ -123,7 +140,7 @@ class mySAMOutput(MyDataset):
 
     def plot_pred(self):
         import cv2
-        idx = random.choice(len(self.mask_output))
+        idx = random.choice(range(len(self.mask_output)))
         filename = self.mask_output[idx]['filename']
         masks = self.mask_output[idx]['masks']
         boxes = self.mask_output[idx]['bboxes']
@@ -134,13 +151,13 @@ class mySAMOutput(MyDataset):
         plt.figure(figsize=(10, 10))
         plt.imshow(image_rgb)
         for mask in masks:
+            print(type(mask))
+            print(mask)
             show_mask(mask.cpu().numpy(), plt.gca(), random_color=True)
         for box in boxes:
             show_box(box.cpu().numpy(), plt.gca())
         plt.axis('off')
         plt.show()
-
-
 
 
 #for removing number and whitespace in our maskoutput class id
@@ -159,8 +176,8 @@ def remove_nums_whitespace(string):
     pattern = '[0-9\s]+'
     return re.sub(pattern, '', string)
 
-def get_random_image_ann_path_from_image_folder(image_folder, ann_folder):
-    image_path = random.choice(image_folder)
+def get_random_image_ann_path_from_image_paths(image_paths, ann_folder):
+    image_path = random.choice(image_paths)
     ann_path = os.path.join(ann_folder, os.path.splitext(os.path.basename(image_path))[0] + '.txt')
     return image_path, ann_path
 
