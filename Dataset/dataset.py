@@ -50,12 +50,18 @@ class mySAMOutput(MyDataset):
         self.input_format = input_format
         self.image_paths = self.get_image_files()
 
+    def prepare(self):
+        """
+        prepares the dataset with the given args. predicts on the images given in the image directory
+        :return:
+        """
         if self.input_format == 'yolo':
             self.mask_output = self.predict_on_images_yolo_bboxes()
         if self.input_format == 'coco':
             self.mask_output = self.predict_on_images_coco_bboxes()
         else:
             print('invalid mask output')
+
         self.set_binary_masks()
 
     def set_binary_masks(self):
@@ -65,6 +71,7 @@ class mySAMOutput(MyDataset):
           binary_mask = mask.cpu().numpy().squeeze().astype(np.uint8)
           b_masks.append(binary_mask)
           mask_data['b_masks'] = b_masks
+
     """
     Input format 
     """
