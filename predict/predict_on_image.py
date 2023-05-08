@@ -1,4 +1,4 @@
-from yolo_data.LoadingData.load_utils import get_yolo_bboxes_from_txt_file, get_annotation_path, glob_image_files
+from yolo_data.LoadingData.load_utils import get_class_id_bbox_seg_from_yolo, get_annotation_path, glob_image_files
 from yolo_data.Conversions.convert_yolo_pascal_voc import convert_yolo_to_pascal_voc
 
 from my_SAM.config import ID_TO_LABEL_MAP
@@ -45,7 +45,7 @@ def apply_sam_to_image_with_bboxes(img_path, ann_dir, sam_predictor, point_label
     ann_path = get_annotation_path(img_path, ann_dir)
 
     #loading in bbox and class_ids - assumed that boxes are in yolo -
-    bboxes, class_ids = get_yolo_bboxes_from_txt_file(ann_path)
+    class_ids, bboxes, _ = get_class_id_bbox_seg_from_yolo(ann_path)
     print(f'num boxes(instances) in file: {len(bboxes)}')
 
     #loading in labels
