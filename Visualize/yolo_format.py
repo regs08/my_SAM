@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-from yolo_data.LoadingData.load_utils import get_yolo_bboxes_from_txt_file
+from yolo_data.LoadingData.load_utils import get_class_id_bbox_seg_from_yolo
 
 
 def convert_yolo_to_pascal_voc(yolo_box, image_height, image_width, normilized=True):
@@ -86,7 +86,7 @@ def plot_image_with_yolo_boxes(image_path, label_path):
     # Convert the image from BGR to RGB for Matplotlib
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-    bboxes, class_ids = get_yolo_bboxes_from_txt_file(label_path)
+    class_ids, bboxes, _ = get_class_id_bbox_seg_from_yolo(label_path)
 
     # Parse the label data and draw the boxes
     for box in bboxes:
