@@ -2,7 +2,7 @@ import numpy as np
 from skimage.draw import polygon2mask
 
 
-def segmentation_to_mask(segmentation, h, w):
+def seg2mask(segmentation, h, w):
     # Scale the coordinates to match the image size
     x = np.array(segmentation[0::2]) * w
     y = np.array(segmentation[1::2]) * h
