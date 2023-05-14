@@ -8,9 +8,10 @@ from my_SAM.ConvertToJson.convert import get_coco_format_from_sam
 from matplotlib import pyplot as plt
 import re
 import numpy as np
-import os
 import json
 import random
+import os
+import shutil
 
 
 class MyDataset():
@@ -32,7 +33,7 @@ class MyDataset():
 
 class mySAMOutput(MyDataset):
 
-    def __init__(self, image_dir, sam_predictor, anns=None, point_labels=False, input_format='yolo', **args):
+    def __init__(self, image_dir, sam_predictor, anns=None, point_labels=False, input_format='yolo', id_to_label_map=ID_TO_LABEL_MAP):
         """
 
         :param image_dir: image folder
@@ -49,6 +50,7 @@ class mySAMOutput(MyDataset):
         self.point_labels = point_labels
         self.input_format = input_format
         self.image_paths = self.get_image_files()
+        self.id_to_label_map = id_to_label_map
 
     def prepare(self):
         """
@@ -79,7 +81,8 @@ class mySAMOutput(MyDataset):
     def predict_on_images_yolo_bboxes(self):
         output = []
         for img_path in self.image_paths:
-            data = apply_sam_to_image_with_bboxes(img_path, self.anns, self.sam_predictor, self.point_labels)
+            data = apply_sam_to_image_with_bboxes(img_path, self.anns, self.sam_predictor, self.point_labels,
+                                                  id_to_label_map=self.id_to_label_map)
             output.append(data)
         return output
 
@@ -107,8 +110,7 @@ class mySAMOutput(MyDataset):
                 _, seg = extract_segmentation_and_bbox_from_binary_mask(binary_mask, remove_islands=remove_islands)
                 bbox = mask_data['bboxes'][i]
                 # convert our data into a writable line in yolo format append it line by line
-                #hacky fix had to change label_map to start with 0 because of COCO
-                class_id = mask_data['class_ids'][i] +1
+                class_id = mask_data['class_ids'][i]
                 class_id = remove_bckgrnd_marker_from_class_id(class_id)
 
                 lines.append(segmentation_to_yolo_line(class_id=class_id, bbox=bbox, segmentation=seg))
@@ -124,6 +126,7 @@ class mySAMOutput(MyDataset):
         for mask_data in self.mask_output:
             # plus one because background is 0 in coco
             # should take in bboxes from mask out put (more accurate)
+            # hacky fix had to change label_map to start with 0 because of COCO
             mask_data['class_ids'] = [remove_bckgrnd_marker_from_class_id(id + 1) for id in mask_data['class_ids']]
         coco_format = get_coco_format_from_sam(self.mask_output)
 
@@ -165,7 +168,23 @@ class mySAMOutput(MyDataset):
             show_box(box.cpu().numpy(), plt.gca())
         plt.axis('off')
         plt.show()
-
+    """
+    Upload to Roboflow
+    """
+    # def upload_to_roboflow(self):
+    #     """
+    #     gets our roboflow params from our py file. and uploads the images and anns. note Ive had less issues with coco
+    #     json. for yolo must be normed coords and was getting strange results
+    #     :return:
+    #     """
+    #     from roboflow import Roboflow
+    #     #api key
+    #     from my_SAM import robo_flow_params
+    #     from yolo_data.RoboFlow.uploading import upload_images_with_json
+    #     rf = Roboflow(api_key=robo_flow_params.api_key)
+    #     upload_project = rf.workspace().project(robo_flow_params.upload_project_name)
+    #     assert save json path
+    #     upload_images_with_json(upload_data, save_json_path, upload_project)
 
 #for removing number and whitespace in our maskoutput class id
 def remove_bckgrnd_marker_from_class_id(class_id, label_to_id_map=LABEL_TO_ID_MAP, id_to_label_map=ID_TO_LABEL_MAP):
@@ -183,14 +202,30 @@ def remove_nums_whitespace(string):
     pattern = '[0-9\s]+'
     return re.sub(pattern, '', string)
 
+
 def get_random_image_ann_path_from_image_paths(image_paths, ann_folder):
     image_path = random.choice(image_paths)
     ann_path = os.path.join(ann_folder, os.path.splitext(os.path.basename(image_path))[0] + '.txt')
     return image_path, ann_path
 
+
+def copy_images(src_folder, dest_folder):
+    # Get a list of all image files in the source folder
+    img_extensions = [".png", ".jpg", ".jpeg"]
+    img_files = [f for f in os.listdir(src_folder) if f.lower().endswith(tuple(img_extensions))]
+
+    # Copy each image file from the source folder to the destination folder
+    for img_file in img_files:
+        src_path = os.path.join(src_folder, img_file)
+        dest_path = os.path.join(dest_folder, img_file)
+        shutil.copy2(src_path, dest_path)
+
+    print(f"{len(img_files)} image files copied from {src_folder} to {dest_folder}.")
+
 #####
 # Vis utils
 #####
+
 def show_mask(mask, ax, random_color=False):
     if random_color:
         color = np.concatenate([np.random.random(3), np.array([0.6])], axis=0)
