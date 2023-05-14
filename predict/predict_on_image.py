@@ -30,7 +30,7 @@ def apply_sam_to_image_folder_with_boxes(img_dir, ann_dir, predictor, point_labe
     return output
 
 
-def apply_sam_to_image_with_bboxes(img_path, ann_dir, sam_predictor, point_labels=False):
+def apply_sam_to_image_with_bboxes(img_path, ann_dir, sam_predictor, point_labels=False, id_to_label_map=ID_TO_LABEL_MAP):
     """
     TODO experiment with the point labels (background, foreground)
     takes in a img path loads it, finds its corresponding annotation, loads in the bbox from the annotation, then uses
@@ -49,8 +49,7 @@ def apply_sam_to_image_with_bboxes(img_path, ann_dir, sam_predictor, point_label
     print(f'num boxes(instances) in file: {len(bboxes)}')
 
     #loading in labels
-    #note doing hacky fix to compensate for saving to coco. e.g labels must not be 0. 0 is saved for background
-    labels = [ID_TO_LABEL_MAP[id+1] for id in class_ids]
+    labels = [id_to_label_map[id] for id in class_ids]
 
     #extracting background/foreground info and the class label
     labels, background_foreground = get_point_labels(labels)
