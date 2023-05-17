@@ -161,30 +161,28 @@ class mySAMOutput(MyDataset):
         plt.figure(figsize=(10, 10))
         plt.imshow(image_rgb)
         for mask in masks:
-            print(type(mask))
-            print(mask)
             show_mask(mask.cpu().numpy(), plt.gca(), random_color=True)
         for box in boxes:
             show_box(box.cpu().numpy(), plt.gca())
         plt.axis('off')
         plt.show()
+
     """
     Upload to Roboflow
     """
-    # def upload_to_roboflow(self):
-    #     """
-    #     gets our roboflow params from our py file. and uploads the images and anns. note Ive had less issues with coco
-    #     json. for yolo must be normed coords and was getting strange results
-    #     :return:
-    #     """
-    #     from roboflow import Roboflow
-    #     #api key
-    #     from my_SAM import robo_flow_params
-    #     from yolo_data.RoboFlow.uploading import upload_images_with_json
-    #     rf = Roboflow(api_key=robo_flow_params.api_key)
-    #     upload_project = rf.workspace().project(robo_flow_params.upload_project_name)
-    #     assert save json path
-    #     upload_images_with_json(upload_data, save_json_path, upload_project)
+    @staticmethod
+    def upload_to_roboflow_with_json(api_key, project_name, img_folder, json_path):
+        """
+        note had much more accurate images displauyed in RF when json is used
+        :param api_key:
+        :param project_name:
+        :return:
+        """
+        from yolo_data.RoboFlow.uploading import upload_images_with_json
+        from roboflow import Roboflow
+        rf = Roboflow(api_key=api_key)
+        upload_project = rf.workspace().project(project_name)
+        upload_images_with_json(img_folder, json_path, upload_project)
 
 #for removing number and whitespace in our maskoutput class id
 def remove_bckgrnd_marker_from_class_id(class_id, label_to_id_map=LABEL_TO_ID_MAP, id_to_label_map=ID_TO_LABEL_MAP):
