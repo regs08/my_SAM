@@ -13,6 +13,7 @@ import random
 import os
 import shutil
 
+random.seed(42)
 
 class MyDataset():
     def __init__(self,
