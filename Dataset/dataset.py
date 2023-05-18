@@ -11,15 +11,17 @@ import numpy as np
 import json
 import random
 import os
+import cv2
 import shutil
 
 random.seed(42)
 
+
 class MyDataset():
     def __init__(self,
-                image_dir,
-                image_exts=['.jpg', '.tiff', '.png', '.jpeg', '.JPG']
-                ):
+                 image_dir,
+                 image_exts=['.jpg', '.tiff', '.png', '.jpeg', '.JPG']
+                 ):
         self.image_dir = image_dir
         self.image_exts = image_exts
         self.image_paths = self.get_image_files()
@@ -34,7 +36,8 @@ class MyDataset():
 
 class mySAMOutput(MyDataset):
 
-    def __init__(self, image_dir, sam_predictor, anns=None, point_labels=False, input_format='yolo', id_to_label_map=ID_TO_LABEL_MAP):
+    def __init__(self, image_dir, sam_predictor, anns=None, point_labels=False, input_format='yolo',
+                 id_to_label_map=ID_TO_LABEL_MAP):
         """
 
         :param image_dir: image folder
@@ -47,11 +50,16 @@ class mySAMOutput(MyDataset):
         super().__init__(image_dir=image_dir)
 
         self.sam_predictor = sam_predictor
-        self.anns= anns
+        self.anns = anns
         self.point_labels = point_labels
         self.input_format = input_format
-        self.image_paths = self.get_image_files()
+        self.image_paths = self.get_image_files()[:3]
         self.id_to_label_map = id_to_label_map
+        self.label_to_id_map = {v: k for k, v in self.id_to_label_map.items()}
+
+        self.coco_id_to_label_map = {key + 1: value for key, value in id_to_label_map.items()}
+
+        self.coco_label_to_id_map = {v: k for k, v in self.coco_id_to_label_map.items()}
 
     def prepare(self):
         """
@@ -64,16 +72,16 @@ class mySAMOutput(MyDataset):
             self.mask_output = self.predict_on_images_coco_bboxes()
         else:
             print('invalid mask output')
-
+        self.rand_idx = random.choice(range(0, len(self.mask_output)))
         self.set_binary_masks()
 
     def set_binary_masks(self):
-      for mask_data in self.mask_output:
-        b_masks = []
-        for i, mask in enumerate(mask_data['masks']):
-          binary_mask = mask.cpu().numpy().squeeze().astype(np.uint8)
-          b_masks.append(binary_mask)
-          mask_data['b_masks'] = b_masks
+        for mask_data in self.mask_output:
+            b_masks = []
+            for i, mask in enumerate(mask_data['masks']):
+                binary_mask = mask.cpu().numpy().squeeze().astype(np.uint8)
+                b_masks.append(binary_mask)
+                mask_data['b_masks'] = b_masks
 
     """
     Input format 
@@ -105,7 +113,6 @@ class mySAMOutput(MyDataset):
         for mask_data in self.mask_output:
             lines = []
             for i, mask in enumerate(mask_data['masks']):
-
                 binary_mask = mask.cpu().numpy().squeeze().astype(np.uint8)
                 # returns a norm bbox and seg
                 _, seg = extract_segmentation_and_bbox_from_binary_mask(binary_mask, remove_islands=remove_islands)
@@ -113,7 +120,6 @@ class mySAMOutput(MyDataset):
                 # convert our data into a writable line in yolo format append it line by line
                 class_id = mask_data['class_ids'][i]
                 # class_id = remove_bckgrnd_marker_from_class_id(class_id)
-
                 lines.append(segmentation_to_yolo_line(class_id=class_id, bbox=bbox, segmentation=seg))
 
             filename = os.path.splitext(os.path.basename(mask_data['filename']))[0] + '.txt'
@@ -122,14 +128,17 @@ class mySAMOutput(MyDataset):
 
         return outfolder
 
-    def output_to_coco_json(self, save_path):
-
+    def output_to_coco_json(self, save_path, convert_maps_ids_to_coco=False):
+        """
+        if our label maps start with 0, and therefor have class ids that start with
+        0 we will need to increment by1
+        """
         for mask_data in self.mask_output:
             # plus one because background is 0 in coco
             # should take in bboxes from mask out put (more accurate)
             # hacky fix had to change label_map to start with 0 because of COCO
-            mask_data['class_ids'] = [remove_bckgrnd_marker_from_class_id(id + 1) for id in mask_data['class_ids']]
-        coco_format = get_coco_format_from_sam(self.mask_output)
+            mask_data['class_ids'] = [id + 1 for id in mask_data['class_ids']]
+        coco_format = get_coco_format_from_sam(self.mask_output, self.coco_label_to_id_map)
 
         with open(save_path, "w") as of:
             json.dump(coco_format, of, indent=4)
@@ -149,15 +158,48 @@ class mySAMOutput(MyDataset):
     def plot_image_coco_bboxes(self):
         pass
 
-    def plot_pred(self):
-        import cv2
-        idx = random.choice(range(len(self.mask_output)))
-        filename = self.mask_output[idx]['filename']
-        masks = self.mask_output[idx]['masks']
-        boxes = self.mask_output[idx]['bboxes']
+    def load_img_from_mask_output(self, filename):
         image_path = os.path.join(self.image_dir, filename)
         img_arr = cv2.imread(image_path)
         image_rgb = cv2.cvtColor(img_arr, cv2.COLOR_BGR2RGB)
+        return image_rgb
+
+    def plot_from_dataset(self, idx=None):
+        if not idx:
+            idx = self.rand_idx
+
+        filename = self.mask_output[idx]['filename']
+        boxes = self.mask_output[idx]['bboxes']
+
+        image_rgb = self.load_img_from_mask_output(filename)
+
+        print(f'Plotting {filename}....')
+        for box in boxes:
+            x_center, y_center, width, height = box
+            x_min = int((x_center - width / 2) * image_rgb.shape[1])
+            y_min = int((y_center - height / 2) * image_rgb.shape[0])
+            x_max = int((x_center + width / 2) * image_rgb.shape[1])
+            y_max = int((y_center + height / 2) * image_rgb.shape[0])
+            cv2.rectangle(image_rgb, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
+
+        # Show the image with boxes using Matplotlib in Google Colab
+        plt.imshow(image_rgb)
+        plt.axis('off')
+        plt.show()
+
+    def plot_pred(self, idx=None):
+        """
+
+        :param idx: default is set in prepare.
+        :return:
+        """
+        if not idx:
+            idx = self.rand_idx
+        filename = self.mask_output[idx]['filename']
+        boxes = self.mask_output[idx]['bboxes']
+        masks = self.mask_output[idx]['masks']
+
+        image_rgb = self.load_img_from_mask_output(filename)
 
         plt.figure(figsize=(10, 10))
         plt.imshow(image_rgb)
@@ -171,6 +213,7 @@ class mySAMOutput(MyDataset):
     """
     Upload to Roboflow
     """
+
     @staticmethod
     def upload_to_roboflow_with_json(api_key, project_name, img_folder, json_path):
         """
@@ -185,13 +228,14 @@ class mySAMOutput(MyDataset):
         upload_project = rf.workspace().project(project_name)
         upload_images_with_json(img_folder, json_path, upload_project)
 
-#for removing number and whitespace in our maskoutput class id
+
+# for removing number and whitespace in our maskoutput class id
 def remove_bckgrnd_marker_from_class_id(class_id, label_to_id_map=LABEL_TO_ID_MAP, id_to_label_map=ID_TO_LABEL_MAP):
-    #get label
+    # get label
     label = id_to_label_map[class_id]
-    #remove background marker e.g ' 0'
+    # remove background marker e.g ' 0'
     label = remove_nums_whitespace(label)
-    #get correct class_id
+    # get correct class_id
     class_id = label_to_id_map[label]
 
     return class_id
@@ -220,6 +264,7 @@ def copy_images(src_folder, dest_folder):
         shutil.copy2(src_path, dest_path)
 
     print(f"{len(img_files)} image files copied from {src_folder} to {dest_folder}.")
+
 
 #####
 # Vis utils
