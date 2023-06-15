@@ -1,8 +1,7 @@
-from yolo_data.LoadingData.load_utils import get_class_id_bbox_seg_from_yolo, get_annotation_path, glob_image_files
-from yolo_data.Conversions.convert_yolo_pascal_voc import convert_yolo_to_pascal_voc
-
 from my_SAM.config import ID_TO_LABEL_MAP
-from my_SAM.get_point_labels import get_point_labels
+from my_SAM.utils.loading_utils import glob_image_files, get_annotation_path, get_class_id_bbox_seg_from_yolo
+from my_SAM.convert_yolo_pascal_voc import convert_yolo_to_pascal_voc
+
 
 import numpy as np
 import cv2
@@ -10,7 +9,7 @@ import torch
 import os
 
 
-def apply_sam_to_image_folder_with_boxes(img_dir, ann_dir, predictor, point_labels=False):
+def apply_sam_to_image_folder_with_boxes(img_dir, ann_dir, predictor):
     """
 
     :param img_dir: image folder
@@ -24,13 +23,13 @@ def apply_sam_to_image_folder_with_boxes(img_dir, ann_dir, predictor, point_labe
     output = []
 
     for img_path in image_paths:
-        data = apply_sam_to_image_with_bboxes(img_path, ann_dir, predictor, point_labels)
+        data = apply_sam_to_image_with_bboxes(img_path, ann_dir, predictor)
         output.append(data)
 
     return output
 
 
-def apply_sam_to_image_with_bboxes(img_path, ann_dir, sam_predictor, point_labels=False, id_to_label_map=ID_TO_LABEL_MAP):
+def apply_sam_to_image_with_bboxes(img_path, ann_dir, sam_predictor, id_to_label_map=ID_TO_LABEL_MAP):
     """
     TODO experiment with the point labels (background, foreground)
     takes in a img path loads it, finds its corresponding annotation, loads in the bbox from the annotation, then uses
@@ -38,7 +37,6 @@ def apply_sam_to_image_with_bboxes(img_path, ann_dir, sam_predictor, point_label
     :param img_path: path to load image
     :param ann_dir: folder where anns are stored. note filename w/o ext must==image filename
     :param sam_predictor: predictor instance of SAM
-    :param point_labels if we are using the point labels for background, 0, foreground 1
     :return: data package with masks, class ids and filename
     """
     #get ann path
@@ -52,8 +50,6 @@ def apply_sam_to_image_with_bboxes(img_path, ann_dir, sam_predictor, point_label
     #loading in labels
     labels = [id_to_label_map[id] for id in class_ids]
 
-    #extracting background/foreground info and the class label
-    # labels, background_foreground = get_point_labels(labels)
     print('unique labels: ', np.unique(np.array(labels)))
 
     #loading in image
@@ -71,12 +67,10 @@ def apply_sam_to_image_with_bboxes(img_path, ann_dir, sam_predictor, point_label
     from_file_bboxes = torch.tensor(p_v_bboxes, device=sam_predictor.device)
     transformed_bboxes_from_file = sam_predictor.transform.apply_boxes_torch(from_file_bboxes, img.shape[:2])
 
-    point_labels=None
 
     #extracting masks
     masks, _, _ = sam_predictor.predict_torch(
       point_coords=None,
-      point_labels=point_labels,
       boxes=transformed_bboxes_from_file,
       multimask_output=False,
     )
