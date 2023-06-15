@@ -71,6 +71,7 @@ def apply_sam_to_image_with_bboxes(img_path, ann_dir, sam_predictor, id_to_label
     #extracting masks
     masks, _, _ = sam_predictor.predict_torch(
       point_coords=None,
+      point_labels=None,
       boxes=transformed_bboxes_from_file,
       multimask_output=False,
     )
