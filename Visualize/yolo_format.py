@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-from yolo_data.LoadingData.load_utils import get_class_id_bbox_seg_from_yolo
+from my_SAM.utils.loading_utils import get_class_id_bbox_seg_from_yolo
 
 
 def convert_yolo_to_pascal_voc(yolo_box, image_height, image_width, normilized=True):
@@ -51,6 +51,8 @@ def plot_image_with_yolo_annotations(image_path, annotation_path):
             x_min, y_min, x_max, y_max = convert_yolo_to_pascal_voc(bbox_norm, image_height=h, image_width=w)
 
             # Convert normalized segmentation points to pixel coordinates
+            if len(segmentation_norm) % 2 != 0:
+                segmentation_norm = np.append(segmentation_norm, segmentation_norm[-1])
             segmentation = segmentation_norm.reshape(-1, 2) * np.array([w, h])
             segmentation = segmentation.astype(np.int32)
 
