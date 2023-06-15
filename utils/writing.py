@@ -1,6 +1,8 @@
 """
 writing utils for SAM business
 """
+import os
+import shutil
 
 """
 yolo format business
@@ -41,3 +43,22 @@ def write_lines_to_file(filepath, data):
         for lines in data:
           for line in lines:
             f.write(line + '\n')
+
+
+"""
+copying
+"""
+
+
+def copy_images(src_folder, dest_folder):
+    # Get a list of all image files in the source folder
+    img_extensions = [".png", ".jpg", ".jpeg"]
+    img_files = [f for f in os.listdir(src_folder) if f.lower().endswith(tuple(img_extensions))]
+
+    # Copy each image file from the source folder to the destination folder
+    for img_file in img_files:
+        src_path = os.path.join(src_folder, img_file)
+        dest_path = os.path.join(dest_folder, img_file)
+        shutil.copy2(src_path, dest_path)
+
+    print(f"{len(img_files)} image files copied from {src_folder} to {dest_folder}.")
