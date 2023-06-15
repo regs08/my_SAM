@@ -3,6 +3,9 @@ loading utils for SAM busniess
 """
 import os
 import glob
+import shutil
+import random
+random.seed(42)
 
 from my_SAM.config import image_exts
 
@@ -48,6 +51,12 @@ def convert_text_lines_to_yolo_format(lines):
         class_ns.append(cls)
 
     return bboxes, class_ns, segs
+
+
+def get_random_image_ann_path_from_image_paths(image_paths, ann_folder):
+    image_path = random.choice(image_paths)
+    ann_path = os.path.join(ann_folder, os.path.splitext(os.path.basename(image_path))[0] + '.txt')
+    return image_path, ann_path
 
 
 """
