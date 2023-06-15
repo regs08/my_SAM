@@ -44,13 +44,13 @@ def apply_sam_to_image_with_bboxes(img_path, ann_dir, sam_predictor, id_to_label
 
     #loading in bbox and class_ids - assumed that boxes are in yolo -
     class_ids, bboxes, _ = get_class_id_bbox_seg_from_yolo(ann_path)
-    print(f'class_ids in file: {class_ids}')
-    print(f'num boxes(instances) in file: {len(bboxes)}')
+    # print(f'class_ids in file: {class_ids}')
+    # print(f'num boxes(instances) in file: {len(bboxes)}')
 
     #loading in labels
     labels = [id_to_label_map[id] for id in class_ids]
 
-    print('unique labels: ', np.unique(np.array(labels)))
+    # print('unique labels: ', np.unique(np.array(labels)))
 
     #loading in image
     img = cv2.imread(img_path)
