@@ -1,8 +1,9 @@
+#TODO look at inheriting from supervision, loading from coco, plotting grid
 import glob
 from my_SAM.predict.predict_on_image import apply_sam_to_image_with_bboxes
 from my_SAM.postprocessing import extract_segmentation_and_bbox_from_binary_mask
 from my_SAM.config import LABEL_TO_ID_MAP, ID_TO_LABEL_MAP
-from my_SAM.utils.writing import segmentation_to_yolo_line, write_lines_to_file, copy_images
+from my_SAM.utils.writing import segmentation_to_yolo_line, write_lines_to_file
 from my_SAM.utils.loading_utils import get_random_image_ann_path_from_image_paths
 from my_SAM.ConvertToJson.convert import get_coco_format_from_sam
 
@@ -14,7 +15,6 @@ import os
 import cv2
 
 random.seed(42)
-
 
 class MyDataset():
     def __init__(self,
@@ -49,7 +49,7 @@ class SAMOutput(MyDataset):
         self.sam_predictor = sam_predictor
         self.anns = anns
         self.input_format = input_format
-        self.image_paths = self.get_image_files()[:3]
+        self.image_paths = self.get_image_files()
         self.id_to_label_map = id_to_label_map
         self.label_to_id_map = {v: k for k, v in self.id_to_label_map.items()}
 
