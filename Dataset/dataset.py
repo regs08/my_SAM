@@ -66,8 +66,7 @@ class SAMOutput(MyDataset):
             self.mask_output = self.predict_on_images_yolo_bboxes()
         if self.input_format == 'coco':
             self.mask_output = self.predict_on_images_coco_bboxes()
-        else:
-            print('invalid mask output')
+
         self.rand_idx = random.choice(range(0, len(self.mask_output)))
         self.set_binary_masks()
 
@@ -178,6 +177,7 @@ class SAMOutput(MyDataset):
             cv2.rectangle(image_rgb, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
 
         # Show the image with boxes using Matplotlib in Google Colab
+        plt.figure(figsize=(10, 10))
         plt.imshow(image_rgb)
         plt.axis('off')
         plt.show()
