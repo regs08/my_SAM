@@ -3,7 +3,6 @@ loading utils for SAM busniess
 """
 import os
 import glob
-import shutil
 import random
 random.seed(42)
 
