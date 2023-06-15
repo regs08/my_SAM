@@ -115,7 +115,6 @@ class SAMOutput(MyDataset):
                 bbox = mask_data['bboxes'][i]
                 # convert our data into a writable line in yolo format append it line by line
                 class_id = mask_data['class_ids'][i]
-                print(class_id)
                 lines.append(segmentation_to_yolo_line(class_id=class_id, bbox=bbox, segmentation=seg))
 
             filename = os.path.splitext(os.path.basename(mask_data['filename']))[0] + '.txt'
