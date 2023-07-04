@@ -20,7 +20,7 @@ class SAMImageProcessor:
         self.classes = self.get_classes_from_yaml(yaml_file)
         self.label_id_map, self.id_label_map = self.create_label_id_maps(self.classes)
         self.image_file_paths = self.get_image_file_paths()
-        self.sam_dataset = self.get_sam_pred_dataset()
+        self.ds = self.get_sam_pred_dataset()
 
     def get_sam_pred_dataset(self):
         images = {}
@@ -89,14 +89,14 @@ class SAMImageProcessor:
             box_annotator = sv.BoxAnnotator(thickness=5, text_scale=1.0, text_thickness=2)
 
         frame_with_boxes = box_annotator.annotate(
-            scene=self.sam_dataset.images[img_name].copy(),
-            detections=self.sam_dataset.annotations[img_name],
-            labels=[self.id_label_map[id] for id in self.sam_dataset.annotations[img_name].class_id]
+            scene=self.ds.images[img_name].copy(),
+            detections=self.ds.annotations[img_name],
+            labels=[self.id_label_map[id] for id in self.ds.annotations[img_name].class_id]
         )
 
         frame = mask_annotator.annotate(
             scene=frame_with_boxes,
-            detections=self.sam_dataset.annotations[img_name]
+            detections=self.ds.annotations[img_name]
         )
         return frame
 
