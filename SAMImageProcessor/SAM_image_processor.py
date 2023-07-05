@@ -1,43 +1,110 @@
+import os
 import cv2
 import numpy as np
 import torch
-from my_SAM.utils.loading_utils import get_annotation_path, get_class_id_bbox_seg_from_yolo
-from my_SAM.convert_yolo_pascal_voc import convert_yolo_to_pascal_voc
 import supervision as sv
-import os
-import yaml
+from my_SAM.SAMImageProcessor.ImageProcessorBase import ImageProcessorBase
 
-IMAGE_EXTS=(".jpg", ".jpeg", ".png")
+IMAGE_EXTS = (".jpg", ".jpeg", ".png")
+
+class SAMImageProcessor(ImageProcessorBase):
+    def __init__(
+        self,
+        sam_predictor,
+        image_folder,
+        label_folder,
+        image_out_folder,
+        label_out_folder,
+        yaml_file,
+        batch_size=None,
+        min_image_area=.001,
+        approximation_percentage=.5
+    ):
+        """
+        Initialize the SAMImageProcessor.
+        The SAMImageProcessor is responsible for applying the SAM algorithm to a batch of images.
+        After each batch the a SV Detection dataset is created. this is used to
+        save the data to disk or view the data.
 
 
-class SAMImageProcessor:
-
-    def __init__(self, sam_predictor, label_folder, image_folder, yaml_file,):
+        Args:
+            sam_predictor: The SAM predictor object.
+            image_folder: The path to the folder containing input images.
+            label_folder: The path to the folder containing label annotations.
+            image_out_folder: The path to the folder to store output images.
+            label_out_folder: The path to the folder to store output annotations.
+            yaml_file: The path to the YAML file containing class names.
+            batch_size: The number of images in each batch. Defaults to None.
+            min_image_area: The minimum image area threshold. Defaults to 0.001.
+            approximation_percentage: The approximation percentage for output annotations. Defaults to 0.5.
+        """
+        super().__init__(
+            image_folder,
+            label_folder,
+            image_out_folder,
+            label_out_folder,
+            yaml_file,
+            batch_size=batch_size
+        )
         self.sam_predictor = sam_predictor
-        self.label_folder = label_folder
-        self.image_folder = image_folder
+        self.min_image_area = min_image_area
+        self.approximation_percentage = approximation_percentage
 
-        self.classes = self.get_classes_from_yaml(yaml_file)
-        self.label_id_map, self.id_label_map = self.create_label_id_maps(self.classes)
-        self.image_file_paths = self.get_image_file_paths()
-        self.ds = self.get_sam_pred_dataset()
+    def apply_sam_to_image_batch(self):
+        """
+        Apply the SAM algorithm to a batch of images.
 
-    def get_sam_pred_dataset(self):
+        Returns:
+            ds: The DetectionDataset containing the SAM predictions for the batch of images.
+        """
+        batch = next(self.image_gen)
+        print(f"Applying SAM to {len(batch)} images..")
+        ds = self.get_sam_pred_dataset(batch)
+        ds.as_yolo(
+            images_directory_path=self.image_out_folder,
+            annotations_directory_path=self.label_out_folder,
+            min_image_area_percentage=self.min_image_area,
+            approximation_percentage=self.approximation_percentage,
+        )
+        return ds
+
+    def get_sam_pred_dataset(self, image_paths):
+        """
+        Generate a DetectionDataset object for a batch of image paths.
+
+        Args:
+            image_paths: A list of image paths.
+
+        Returns:
+            ds: The DetectionDataset containing images and annotations for the batch.
+        """
         images = {}
         anns = {}
 
-        for img_path in self.image_file_paths:
+        for img_path in image_paths:
             img_name = os.path.basename(img_path)
             detection = self.apply_sam_to_image_with_bboxes(img_path)
             images[img_name] = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB)
             anns[img_name] = detection
 
-        return sv.DetectionDataset(images=images,
-                                      annotations=anns,
-                                      classes=self.classes)
+        return sv.DetectionDataset(
+            images=images,
+            annotations=anns,
+            classes=self.classes
+        )
 
     def apply_sam_to_image_with_bboxes(self, img_path):
+        """
+        Apply the SAM algorithm to an image with bounding boxes.
+
+        Args:
+            img_path: The path to the input image.
+
+        Returns:
+            detection: The detection results (bounding boxes and masks) obtained from SAM.
+        """
         ann_path = self.get_annotation_path(img_path)
+        assert ann_path, f"MISSING ANNOTATION PATH {ann_path}"
         class_ids, bboxes, _ = self.get_class_id_bbox_seg_from_yolo(ann_path)
         img = self.load_image(img_path)
 
@@ -66,16 +133,7 @@ class SAMImageProcessor:
 
         return detection
 
-    def get_image_file_paths(self):
-        return [os.path.join(self.image_folder, f)
-                        for f in os.listdir(self.image_folder) if f.endswith(IMAGE_EXTS)]
-
-    def get_annotation_path(self, img_path):
-        label_path = get_annotation_path(img_path, self.label_folder)
-        assert os.path.exists(label_path), f'{label_path} NOT FOUND'
-        return label_path
-
-    def annotate_mask(self, img_name, mask_annotator=None, box_annotator=None):
+    def annotate_mask(self, ds, img_name, mask_annotator=None, box_annotator=None):
         """
 
         :param img_name: basename of the iamge file
@@ -89,44 +147,13 @@ class SAMImageProcessor:
             box_annotator = sv.BoxAnnotator(thickness=5, text_scale=1.0, text_thickness=2)
 
         frame_with_boxes = box_annotator.annotate(
-            scene=self.ds.images[img_name].copy(),
-            detections=self.ds.annotations[img_name],
-            labels=[self.id_label_map[id] for id in self.ds.annotations[img_name].class_id]
+            scene=ds.images[img_name].copy(),
+            detections=ds.annotations[img_name],
+            labels=[self.id_label_map[id] for id in ds.annotations[img_name].class_id]
         )
 
         frame = mask_annotator.annotate(
             scene=frame_with_boxes,
-            detections=self.ds.annotations[img_name]
+            detections=ds.annotations[img_name]
         )
         return frame
-
-    @staticmethod
-    def get_class_id_bbox_seg_from_yolo(ann_path):
-        return get_class_id_bbox_seg_from_yolo(ann_path)
-
-    @staticmethod
-    def load_image(img_path):
-        img = cv2.imread(img_path)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        return img
-
-    @staticmethod
-    def convert_yolo_to_pascal_voc(img, bboxes):
-        return convert_yolo_to_pascal_voc(img, bboxes)
-
-    @staticmethod
-    def get_classes_from_yaml(yaml_file):
-        with open(yaml_file, 'r') as f:
-            yaml_data = yaml.safe_load(f)
-
-        classes = yaml_data['names']
-
-        return classes
-
-    @staticmethod
-    def create_label_id_maps(class_names):
-        label_to_id_map = {label: idx for idx, label in enumerate(class_names)}
-        id_to_label_map = {idx: label for label, idx in label_to_id_map.items()}
-
-        return label_to_id_map, id_to_label_map
-
