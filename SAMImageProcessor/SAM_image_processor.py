@@ -51,12 +51,12 @@ class SAMImageProcessor(ImageProcessorBase):
         self.approximation_percentage = approximation_percentage
 
     def apply_sam_to_all_batches(self):
+
         while True:
             try:
-                ds = self.apply_sam_to_image_batch()
+                self.apply_sam_to_image_batch()
             except StopIteration:
                 break
-
     def apply_sam_to_image_batch(self):
         """
         Apply the SAM algorithm to a batch of images.
